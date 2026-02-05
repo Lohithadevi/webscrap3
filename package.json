@@ -1,0 +1,21 @@
+{
+  "name": "automated-web-scraper",
+  "version": "2.0.0",
+  "description": "Automated web scraping system for 10k+ students with concurrency, retry mechanisms, and caching",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js",
+    "test": "node test-skillrack.js",
+    "clean-cache": "node -e \"require('fs').unlinkSync('./cache.json')\""
+  },
+  "keywords": ["web-scraping", "leetcode", "github", "codeforces", "atcoder", "automation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "fs-extra": "^11.2.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
