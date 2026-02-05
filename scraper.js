@@ -324,26 +324,39 @@ const Adapters = {
 // Worker function for processing students
 async function processStudent(student) {
     const startTime = Date.now();
+    console.log(`🔄 Processing student: ${student.name}`);
     
     try {
-        const [leetcodeData, githubData, codeforcesData, atcoderData, skillrackData] = await Promise.allSettled([
-            Adapters.leetcode(student.handles?.leetcode),
-            Adapters.github(student.handles?.github),
-            Adapters.codeforces(student.handles?.codeforces),
-            Adapters.atcoder(student.handles?.atcoder),
-            Adapters.skillrack(student.handles?.skillrack)
-        ]);
+        console.log(`  📊 Fetching LeetCode data for ${student.handles?.leetcode || 'N/A'}...`);
+        const leetcodeData = await Adapters.leetcode(student.handles?.leetcode);
+        console.log(`  ✅ LeetCode finished: ${leetcodeData.total} problems`);
+        
+        console.log(`  🐙 Fetching GitHub data for ${student.handles?.github || 'N/A'}...`);
+        const githubData = await Adapters.github(student.handles?.github);
+        console.log(`  ✅ GitHub finished: ${githubData.repos} repos, ${githubData.mergedPRs} PRs`);
+        
+        console.log(`  🏆 Fetching Codeforces data for ${student.handles?.codeforces || 'N/A'}...`);
+        const codeforcesData = await Adapters.codeforces(student.handles?.codeforces);
+        console.log(`  ✅ Codeforces finished: ${codeforcesData.solved} problems`);
+        
+        console.log(`  🎯 Fetching AtCoder data for ${student.handles?.atcoder || 'N/A'}...`);
+        const atcoderData = await Adapters.atcoder(student.handles?.atcoder);
+        console.log(`  ✅ AtCoder finished: ${atcoderData.solved} problems`);
+        
+        console.log(`  🎓 Fetching SkillRack data...`);
+        const skillrackData = await Adapters.skillrack(student.handles?.skillrack);
+        console.log(`  ✅ SkillRack finished: ${skillrackData.solved || 0} problems`);
 
         const result = {
             id: student.id,
             name: student.name,
             handles: student.handles,
             data: {
-                leetcode: leetcodeData.status === 'fulfilled' ? leetcodeData.value : { total: 0, easy: 0, medium: 0, hard: 0 },
-                github: githubData.status === 'fulfilled' ? githubData.value : { repos: 0, mergedPRs: 0 },
-                codeforces: codeforcesData.status === 'fulfilled' ? codeforcesData.value : { solved: 0 },
-                atcoder: atcoderData.status === 'fulfilled' ? atcoderData.value : { solved: 0 },
-                skillrack: skillrackData.status === 'fulfilled' ? skillrackData.value : { solved: 0, userInfo: null }
+                leetcode: leetcodeData,
+                github: githubData,
+                codeforces: codeforcesData,
+                atcoder: atcoderData,
+                skillrack: skillrackData
             },
             processingTime: Date.now() - startTime,
             timestamp: new Date().toISOString()
@@ -351,10 +364,11 @@ async function processStudent(student) {
 
         // Calculate total competitive programming problems
         result.data.totalCP = result.data.leetcode.total + result.data.codeforces.solved + result.data.atcoder.solved + (result.data.skillrack.solved || 0);
-
+        
+        console.log(`  🎉 ${student.name} completed in ${result.processingTime}ms - Total CP: ${result.data.totalCP}`);
         return result;
     } catch (error) {
-        console.error(`Error processing student ${student.name}:`, error.message);
+        console.error(`❌ Error processing student ${student.name}:`, error.message);
         return {
             id: student.id,
             name: student.name,
@@ -376,23 +390,31 @@ async function processStudent(student) {
 
 // Concurrent batch processor
 async function processBatch(students, batchNumber) {
-    console.log(`📦 Processing Batch ${batchNumber} (${students.length} students)...`);
+    console.log(`\n📦 ========== BATCH ${batchNumber} STARTED ==========`);
+    console.log(`📊 Processing ${students.length} students with ${CONFIG.CONCURRENCY} concurrent workers...`);
     
-    const semaphore = new Array(CONFIG.CONCURRENCY).fill(null);
     const results = [];
     
     for (let i = 0; i < students.length; i += CONFIG.CONCURRENCY) {
         const chunk = students.slice(i, i + CONFIG.CONCURRENCY);
-        const chunkPromises = chunk.map(student => processStudent(student));
+        console.log(`\n🚀 Starting chunk ${Math.floor(i/CONFIG.CONCURRENCY) + 1} (students ${i+1}-${Math.min(i+CONFIG.CONCURRENCY, students.length)})`);
         
+        const chunkPromises = chunk.map(student => processStudent(student));
         const chunkResults = await Promise.all(chunkPromises);
         results.push(...chunkResults);
         
         // Progress update
         const processed = Math.min(i + CONFIG.CONCURRENCY, students.length);
-        console.log(`   ✓ Processed ${processed}/${students.length} students in batch ${batchNumber}`);
+        console.log(`\n✅ Chunk completed! Progress: ${processed}/${students.length} students in batch ${batchNumber}`);
+        
+        // Brief pause between chunks
+        if (i + CONFIG.CONCURRENCY < students.length) {
+            console.log(`⏸️  Brief pause before next chunk...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
     }
     
+    console.log(`\n🎉 ========== BATCH ${batchNumber} COMPLETED ==========`);
     return results;
 }
 

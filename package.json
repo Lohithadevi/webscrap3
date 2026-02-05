@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node scraper.js",
     "test": "node test-skillrack.js",
+    "stats": "node stats.js",
     "clean-cache": "node -e \"require('fs').unlinkSync('./cache.json')\""
   },
   "keywords": ["web-scraping", "leetcode", "github", "codeforces", "atcoder", "automation"],
